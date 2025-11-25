@@ -45,15 +45,17 @@ jobs:
       # ------------------------------
       # 5. Run Selenium TestNG Tests
       # ------------------------------
-      - name: 🧪 Run Selenium Tests (generates Extent Report)
+      - name: 🧪 Run Selenium Tests (generate Extent Report)
         run: mvn test
 
       # ------------------------------
-      # 6. Debug - List output files
+      # 6. Debug - check if extent-report folder exists
       # ------------------------------
-      - name: 📁 List all files
+      - name: 📁 List extent-report folder
         if: always()
-        run: ls -R .
+        run: |
+          echo "Current working directory: $(pwd)"
+          ls -R extent-report || echo "extent-report folder not found"
 
       # ------------------------------
       # 7. Upload Extent Report + Screenshots
