@@ -13,22 +13,22 @@ jobs:
 
     steps:
       # ------------------------------
-      # 1. Checkout repo
+      # 1. Checkout repository
       # ------------------------------
       - name: ⬇️ Checkout code
         uses: actions/checkout@v3
 
       # ------------------------------
-      # 2. Setup Java
+      # 2. Setup Java 17
       # ------------------------------
       - name: ☕ Setup Java
         uses: actions/setup-java@v3
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: temurin
+          java-version: "17"
 
       # ------------------------------
-      # 3. Install Chrome
+      # 3. Install Google Chrome
       # ------------------------------
       - name: 🧩 Install Chrome
         uses: browser-actions/setup-chrome@v1
@@ -37,16 +37,26 @@ jobs:
         run: google-chrome --version
 
       # ------------------------------
-      # 4. Build + Run Tests
+      # 4. Build Project
       # ------------------------------
-      - name: 📦 Install dependencies
+      - name: 📦 Build Project (skip tests)
         run: mvn clean install -DskipTests
 
-      - name: 🧪 Run Selenium Tests (Extent Report)
+      # ------------------------------
+      # 5. Run Selenium TestNG Tests
+      # ------------------------------
+      - name: 🧪 Run Selenium Tests (generates Extent Report)
         run: mvn test
 
       # ------------------------------
-      # 5. Upload Extent Report
+      # 6. Debug - List output files
+      # ------------------------------
+      - name: 📁 List all files
+        if: always()
+        run: ls -R .
+
+      # ------------------------------
+      # 7. Upload Extent Report + Screenshots
       # ------------------------------
       - name: 📤 Upload Extent Report
         if: always()
@@ -54,6 +64,5 @@ jobs:
         with:
           name: extent-report
           path: |
-            extent-report/ExtentReport.html
-            extent-report/screenshots/
-
+            **/extent-report/ExtentReport.html
+            **/extent-report/screenshots/
