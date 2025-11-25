@@ -1,0 +1,59 @@
+name: Run Selenium Tests with Extent Report
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  selenium-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------------
+      # 1. Checkout repo
+      # ------------------------------
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v3
+
+      # ------------------------------
+      # 2. Setup Java
+      # ------------------------------
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # ------------------------------
+      # 3. Install Chrome
+      # ------------------------------
+      - name: 🧩 Install Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: 🔍 Show Chrome version
+        run: google-chrome --version
+
+      # ------------------------------
+      # 4. Build + Run Tests
+      # ------------------------------
+      - name: 📦 Install dependencies
+        run: mvn clean install -DskipTests
+
+      - name: 🧪 Run Selenium Tests (Extent Report)
+        run: mvn test
+
+      # ------------------------------
+      # 5. Upload Extent Report
+      # ------------------------------
+      - name: 📤 Upload Extent Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extent-report
+          path: |
+            extent-report/ExtentReport.html
+            extent-report/screenshots/
+
