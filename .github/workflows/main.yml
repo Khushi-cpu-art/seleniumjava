@@ -12,59 +12,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ------------------------------
-      # 1. Checkout repository
-      # ------------------------------
-      - name: ⬇️ Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      # ------------------------------
-      # 2. Setup Java 17
-      # ------------------------------
       - name: ☕ Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: "17"
 
-      # ------------------------------
-      # 3. Install Google Chrome
-      # ------------------------------
       - name: 🧩 Install Chrome
         uses: browser-actions/setup-chrome@v1
 
-      - name: 🔍 Show Chrome version
-        run: google-chrome --version
+      - name: 🧩 Install Chrome dependencies
+        run: sudo apt-get update && sudo apt-get install -y libnss3 libgconf-2-4 libxss1 libappindicator3-1 fonts-liberation
 
-      # ------------------------------
-      # 4. Build Project
-      # ------------------------------
       - name: 📦 Build Project (skip tests)
         run: mvn clean install -DskipTests
 
-      # ------------------------------
-      # 5. Run Selenium TestNG Tests
-      # ------------------------------
-      - name: 🧪 Run Selenium Tests (generate Extent Report)
+      - name: 🧪 Run Selenium Tests
         run: mvn test
 
-      # ------------------------------
-      # 6. Debug - check if extent-report folder exists
-      # ------------------------------
-      - name: 📁 List extent-report folder
+      - name: 📁 Debug extent-report folder
         if: always()
-        run: |
-          echo "Current working directory: $(pwd)"
-          ls -R extent-report || echo "extent-report folder not found"
+        run: ls -R target/extent-report || echo "No extent-report folder"
 
-      # ------------------------------
-      # 7. Upload Extent Report + Screenshots
-      # ------------------------------
       - name: 📤 Upload Extent Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: extent-report
           path: |
-            **/extent-report/ExtentReport.html
-            **/extent-report/screenshots/
+            target/extent-report/ExtentReport.html
+            target/extent-report/screenshots/
