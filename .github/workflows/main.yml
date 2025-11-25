@@ -24,7 +24,9 @@ jobs:
         uses: browser-actions/setup-chrome@v1
 
       - name: 🧩 Install Chrome dependencies
-        run: sudo apt-get update && sudo apt-get install -y libnss3 libgconf-2-4 libxss1 libappindicator3-1 fonts-liberation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3 libxss1 fonts-liberation libappindicator3-1
 
       - name: 📦 Build Project (skip tests)
         run: mvn clean install -DskipTests
