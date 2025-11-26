@@ -4,15 +4,14 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
   selenium-test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: ⬇️ Checkout Code
+        uses: actions/checkout@v3
 
       - name: ☕ Setup Java
         uses: actions/setup-java@v3
@@ -23,20 +22,24 @@ jobs:
       - name: 🧩 Install Chrome
         uses: browser-actions/setup-chrome@v1
 
-      - name: 🧩 Install Chrome dependencies
+      - name: 🔍 Verify Chrome Installation
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libnss3 libxss1 fonts-liberation libappindicator3-1
+          which google-chrome
+          google-chrome --version || echo "Chrome NOT found"
 
-      - name: 📦 Build Project (skip tests)
+      - name: 🛠 Maven Build
         run: mvn clean install -DskipTests
 
       - name: 🧪 Run Selenium Tests
-        run: mvn test
+        run: mvn -X test
 
       - name: 📁 Debug extent-report folder
         if: always()
-        run: ls -R target/extent-report || echo "No extent-report folder"
+        run: |
+          echo "===== Root Project Structure ====="
+          ls -R .
+          echo "===== Checking target/extent-report ====="
+          ls -R target/extent-report || echo "❌ Extent report NOT GENERATED!"
 
       - name: 📤 Upload Extent Report
         if: always()
