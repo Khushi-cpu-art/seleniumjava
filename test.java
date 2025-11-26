@@ -1,72 +1,118 @@
 package tests;
 
-import com.aventstack.extentreports.ExtentReports;
-import com.aventstack.extentreports.ExtentTest;
+import com.aventstack.extentreports.*;
 import com.aventstack.extentreports.reporter.ExtentSparkReporter;
+
 import io.github.bonigarcia.wdm.WebDriverManager;
+
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+
+import org.testng.ITestResult;
 import org.testng.annotations.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.lang.reflect.Method;
+import java.nio.file.*;
 
-public class SampleTest {
+public class SingleTest {
 
+    private WebDriver driver;
     private static ExtentReports extent;
     private ExtentTest test;
-    private WebDriver driver;
 
+    // -----------------------------
+    // EXTENT REPORT SETUP
+    // -----------------------------
     @BeforeSuite
     public void setupExtent() {
+        System.out.println("📄 Creating Extent Report...");
         ExtentSparkReporter spark = new ExtentSparkReporter("target/extent-report/ExtentReport.html");
         extent = new ExtentReports();
         extent.attachReporter(spark);
     }
 
+    // -----------------------------
+    // DRIVER SETUP BEFORE EACH TEST
+    // -----------------------------
     @BeforeMethod
-    public void setupDriver() {
-        WebDriverManager.chromedriver().setup();
+    public void setupDriver(Method method) {
+
+        test = extent.createTest(method.getName());
+
+        WebDriverManager.chromedriver().avoidBrowserDetection().setup();
+
         ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--window-size=1920,1080");
+        options.addArguments("--headless=new");
+        options.addArguments("--no-sandbox");
+        options.addArguments("--disable-dev-shm-usage");
+        options.addArguments("--remote-allow-origins=*");
+        options.addArguments("--window-size=1920,1080");
+
         driver = new ChromeDriver(options);
     }
 
-    @Test
-    public void openHomePage() throws IOException {
-        test = extent.createTest("Open Home Page");
-        driver.get("https://theysaidso.com");
-        takeScreenshot("HomePage");
-        test.pass("Home page opened and screenshot taken");
+    // -----------------------------
+    // TAKE SCREENSHOT
+    // -----------------------------
+    private void takeScreenshot(String name) throws IOException {
+        Path folder = Path.of("target/extent-report/screenshots");
+        Files.createDirectories(folder);
+
+        File src = ((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);
+        Path dest = folder.resolve(name + ".png");
+        Files.copy(src.toPath(), dest);
+
+        System.out.println("📸 Saved screenshot: " + dest.toAbsolutePath());
+
+        test.addScreenCaptureFromPath("screenshots/" + name + ".png");
     }
 
-    @Test
-    public void scrollPage() throws IOException {
-        test = extent.createTest("Scroll Page");
-        driver.get("https://theysaidso.com");
-        ((JavascriptExecutor) driver).executeScript("window.scrollBy(0,1000)");
-        takeScreenshot("ScrolledPage");
-        test.pass("Page scrolled and screenshot taken");
-    }
-
+    // -----------------------------
+    // AFTER TEST LOGIC
+    // -----------------------------
     @AfterMethod
-    public void tearDown() {
-        if (driver != null) driver.quit();
+    public void tearDownMethod(ITestResult result) throws IOException {
+        String methodName = result.getMethod().getMethodName();
+
+        if (result.getStatus() == ITestResult.FAILURE) {
+            System.out.println("❌ FAILED: " + result.getThrowable());
+            test.fail(result.getThrowable());
+        }
+
+        takeScreenshot(methodName);
+
+        if (driver != null) {
+            driver.quit();
+        }
     }
 
     @AfterSuite
-    public void tearDownExtent() {
-        if (extent != null) extent.flush();
+    public void flushReport() {
+        System.out.println("📄 Flushing Extent Report...");
+        extent.flush();
     }
 
-    private void takeScreenshot(String name) throws IOException {
-        File screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);
-        Path dest = Path.of("target/extent-report/screenshots", name + ".png");
-        Files.createDirectories(dest.getParent());
-        Files.copy(screenshot.toPath(), dest);
-        test.addScreenCaptureFromPath("screenshots/" + name + ".png");
+    // -----------------------------
+    // SAMPLE TESTS
+    // -----------------------------
+    @Test
+    public void testGoogle() {
+        driver.get("https://google.com");
+        test.info("Opened Google");
+    }
+
+    @Test
+    public void testYouTube() {
+        driver.get("https://youtube.com");
+        test.info("Opened YouTube");
+    }
+
+    @Test
+    public void testBing() {
+        driver.get("https://bing.com");
+        test.info("Opened Bing");
     }
 }
