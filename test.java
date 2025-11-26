@@ -1,6 +1,5 @@
-package tests;
-
-import com.aventstack.extentreports.*;
+import com.aventstack.extentreports.ExtentReports;
+import com.aventstack.extentreports.ExtentTest;
 import com.aventstack.extentreports.reporter.ExtentSparkReporter;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
@@ -15,39 +14,38 @@ import org.testng.annotations.*;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
-public class SingleTest {
+public class test {
 
     private WebDriver driver;
     private static ExtentReports extent;
-    private ExtentTest test;
+    private ExtentTest logger;
 
-    // -----------------------------
-    // EXTENT REPORT SETUP
-    // -----------------------------
+    // ================================
+    // SETUP EXTENT REPORT
+    // ================================
     @BeforeSuite
-    public void setupExtent() {
-        System.out.println("📄 Creating Extent Report...");
-        ExtentSparkReporter spark = new ExtentSparkReporter("target/extent-report/ExtentReport.html");
+    public void setupReport() {
+        System.out.println("📄 Setting up Extent Report...");
 
+        ExtentSparkReporter spark = new ExtentSparkReporter("target/extent-report/ExtentReport.html");
         extent = new ExtentReports();
         extent.attachReporter(spark);
 
-        System.out.println("📄 Extent Report initialized at target/extent-report/");
+        System.out.println("📁 Report folder created: target/extent-report/");
     }
 
-    // -----------------------------
-    // DRIVER SETUP BEFORE EACH TEST
-    // -----------------------------
+    // ================================
+    // SETUP CHROME BEFORE EACH TEST
+    // ================================
     @BeforeMethod
-    public void setupDriver(Method method) {
+    public void setup(Method method) {
 
-        test = extent.createTest(method.getName());
+        logger = extent.createTest(method.getName());
 
-        System.out.println("➡ Setting up ChromeDriver for test: " + method.getName());
-
-        WebDriverManager.chromedriver().avoidBrowserDetection().setup();
+        WebDriverManager.chromedriver().setup();
 
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless=new");
@@ -58,81 +56,70 @@ public class SingleTest {
 
         try {
             driver = new ChromeDriver(options);
-            System.out.println("✅ ChromeDriver started successfully");
+            logger.info("Chrome launched");
         } catch (Exception e) {
-            System.out.println("❌ CHROME FAILED TO START");
-            e.printStackTrace();
-            throw e;  // Make sure test fails if Chrome fails
+            logger.fail("Chrome failed to start: " + e.getMessage());
+            throw e;
         }
     }
 
-    // -----------------------------
-    // TAKE SCREENSHOT
-    // -----------------------------
-    private void takeScreenshot(String name) throws IOException {
-        Path folder = Path.of("target/extent-report/screenshots");
-        Files.createDirectories(folder);
+    // ================================
+    // UTILITY — TAKE SCREENSHOT
+    // ================================
+    public void capture(String name) throws IOException {
+        Path screenshotsDir = Path.of("target/extent-report/screenshots");
+        Files.createDirectories(screenshotsDir);
 
         File src = ((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);
-        Path dest = folder.resolve(name + ".png");
-
+        Path dest = screenshotsDir.resolve(name + ".png");
         Files.copy(src.toPath(), dest);
 
-        System.out.println("📸 Screenshot saved: " + dest.toAbsolutePath());
-
-        test.addScreenCaptureFromPath("screenshots/" + name + ".png");
+        logger.addScreenCaptureFromPath("screenshots/" + name + ".png");
     }
 
-    // -----------------------------
-    // AFTER EACH TEST LOGIC
-    // -----------------------------
+    // ================================
+    // AFTER EVERY TEST
+    // ================================
     @AfterMethod
-    public void tearDownMethod(ITestResult result) throws IOException {
-        String name = result.getMethod().getMethodName();
-
+    public void tearDown(ITestResult result, Method method) throws IOException {
         if (result.getStatus() == ITestResult.FAILURE) {
-            System.out.println("❌ Test FAILED: " + name);
-            System.out.println("❌ ERROR: " + result.getThrowable());
-            test.fail(result.getThrowable());
+            logger.fail("Test Failed: " + result.getThrowable());
         } else {
-            System.out.println("✅ Test PASSED: " + name);
+            logger.pass("Test Passed");
         }
 
-        takeScreenshot(name);
+        capture(method.getName());
 
-        if (driver != null) {
-            driver.quit();
-        }
+        if (driver != null) driver.quit();
     }
 
-    // -----------------------------
-    // FLUSH REPORT
-    // -----------------------------
-    @AfterSuite
-    public void flushReport() {
-        System.out.println("📄 Flushing Extent Report...");
-        extent.flush();
-        System.out.println("📄 Extent Report Flushed!");
-    }
-
-    // -----------------------------
-    // SAMPLE TEST CASES
-    // -----------------------------
+    // ================================
+    // TEST CASES
+    // ================================
     @Test
     public void openGoogle() {
         driver.get("https://google.com");
-        test.info("Opened Google");
+        logger.info("Opened Google");
     }
 
     @Test
     public void openYouTube() {
         driver.get("https://youtube.com");
-        test.info("Opened YouTube");
+        logger.info("Opened YouTube");
     }
 
     @Test
     public void openBing() {
         driver.get("https://bing.com");
-        test.info("Opened Bing");
+        logger.info("Opened Bing");
+    }
+
+    // ================================
+    // FLUSH REPORT
+    // ================================
+    @AfterSuite
+    public void flush() {
+        extent.flush();
+        System.out.println("📄 Extent Report generated.");
     }
 }
