@@ -1,4 +1,4 @@
-name: Selenium Debug
+name: Run Selenium Tests with Extent Report
 
 on:
   workflow_dispatch:
@@ -10,48 +10,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: ⬇️ Checkout
+      - name: ⬇️ Checkout code
         uses: actions/checkout@v3
 
-      - name: ☕ Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: temurin
-          java-version: "17"
+      - name: 🔧 Install Chrome dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3 libxss1 libappindicator3-1 fonts-liberation
 
-      - name: 🧩 Install Chrome
+      - name: 🟢 Setup Chrome
         uses: browser-actions/setup-chrome@v1
 
-      - name: 🔍 Debug Chrome Install
+      - name: 🟢 Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: 📦 Compile test.java manually
         run: |
-          echo "Chrome Path:"
-          which google-chrome
-          echo "Chrome Version:"
-          google-chrome --version
+          mkdir -p target/classes
+          javac -cp ".:$(dependency:list -DincludeScope=test -DoutputFile=cp.txt && cat cp.txt | grep -oP '(?<=path=").*(?=")')" \
+            test.java -d target/classes
 
-      - name: 🛠 Maven Build
-        run: mvn clean install -DskipTests
-
-      # 👇 MOST IMPORTANT: run tests in DEBUG MODE
-      - name: 🧪 Run Selenium Tests (debug mode)
+      - name: 🧪 Run test.java using TestNG manually
         run: |
-          echo "======= RUNNING TESTS ======="
-          mvn -X -e test || true
-          echo "======= TESTS FINISHED ======="
-
-      # 👇 SEE CONTENT OF PROJECT
-      - name: 📁 Debug target folder
-        if: always()
-        run: |
-          echo "====== Project Structure ======"
-          ls -R .
-
-          echo "====== Does extent-report exist? ======"
-          ls -R target/extent-report || echo "❌ NO REPORT FOLDER FOUND"
+          javac -cp "target/classes:$(dependency:list -DincludeScope=test -DoutputFile=cp.txt && cat cp.txt | grep -oP '(?<=path=").*(?=")')" \
+            test.java -d target/classes
+          
+          java -cp "target/classes:$(dependency:list -DincludeScope=test -DoutputFile=cp.txt && cat cp.txt | grep -oP '(?<=path=").*(?=")')" \
+            org.testng.TestNG testng.xml
 
       - name: 📤 Upload Extent Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: extent-report
-          path: target/extent-report/
+          path: |
+            target/extent-report/ExtentReport.html
+            target/extent-report/screenshots/
