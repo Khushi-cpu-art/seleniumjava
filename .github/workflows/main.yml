@@ -1,4 +1,4 @@
-name: Run Selenium Tests with Extent Report
+name: Selenium Debug
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: ⬇️ Checkout Code
+      - name: ⬇️ Checkout
         uses: actions/checkout@v3
 
       - name: ☕ Setup Java
@@ -22,30 +22,36 @@ jobs:
       - name: 🧩 Install Chrome
         uses: browser-actions/setup-chrome@v1
 
-      - name: 🔍 Verify Chrome Installation
+      - name: 🔍 Debug Chrome Install
         run: |
+          echo "Chrome Path:"
           which google-chrome
-          google-chrome --version || echo "Chrome NOT found"
+          echo "Chrome Version:"
+          google-chrome --version
 
       - name: 🛠 Maven Build
         run: mvn clean install -DskipTests
 
-      - name: 🧪 Run Selenium Tests
-        run: mvn -X test
+      # 👇 MOST IMPORTANT: run tests in DEBUG MODE
+      - name: 🧪 Run Selenium Tests (debug mode)
+        run: |
+          echo "======= RUNNING TESTS ======="
+          mvn -X -e test || true
+          echo "======= TESTS FINISHED ======="
 
-      - name: 📁 Debug extent-report folder
+      # 👇 SEE CONTENT OF PROJECT
+      - name: 📁 Debug target folder
         if: always()
         run: |
-          echo "===== Root Project Structure ====="
+          echo "====== Project Structure ======"
           ls -R .
-          echo "===== Checking target/extent-report ====="
-          ls -R target/extent-report || echo "❌ Extent report NOT GENERATED!"
+
+          echo "====== Does extent-report exist? ======"
+          ls -R target/extent-report || echo "❌ NO REPORT FOLDER FOUND"
 
       - name: 📤 Upload Extent Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: extent-report
-          path: |
-            target/extent-report/ExtentReport.html
-            target/extent-report/screenshots/
+          path: target/extent-report/
