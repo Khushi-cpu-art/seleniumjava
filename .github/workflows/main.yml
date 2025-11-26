@@ -27,21 +27,21 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
-      - name: 📦 Compile test.java manually
+      - name: 📦 Download Maven dependencies
+        run: mvn dependency:resolve
+
+      - name: 🧪 Compile test.java with dependencies
         run: |
+          cp=$(mvn dependency:build-classpath -Dmdep.outputFile=cp.txt && cat cp.txt)
           mkdir -p target/classes
-          javac -cp ".:$(dependency:list -DincludeScope=test -DoutputFile=cp.txt && cat cp.txt | grep -oP '(?<=path=").*(?=")')" \
-            test.java -d target/classes
+          javac -cp "target/classes:$cp" test.java -d target/classes
 
-      - name: 🧪 Run test.java using TestNG manually
+      - name: 🏃 Run test.java with TestNG
         run: |
-          javac -cp "target/classes:$(dependency:list -DincludeScope=test -DoutputFile=cp.txt && cat cp.txt | grep -oP '(?<=path=").*(?=")')" \
-            test.java -d target/classes
-          
-          java -cp "target/classes:$(dependency:list -DincludeScope=test -DoutputFile=cp.txt && cat cp.txt | grep -oP '(?<=path=").*(?=")')" \
-            org.testng.TestNG testng.xml
+          cp=$(mvn dependency:build-classpath -Dmdep.outputFile=cp.txt && cat cp.txt)
+          java -cp "target/classes:$cp" org.testng.TestNG testng.xml
 
-      - name: 📤 Upload Extent Report
+      - name: 📤 Upload Extent Report artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
